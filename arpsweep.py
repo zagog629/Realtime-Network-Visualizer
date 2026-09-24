@@ -85,11 +85,19 @@ def local_network(iface=None) -> tuple[object, ipaddress.IPv4Network]:
     """Return (iface, network) for the interface Scapy would use by default."""
     iface = iface or conf.iface
     ip = get_if_addr(iface)
+    own = ipaddress.ip_address(ip)
+ 
+    candidates = []
     for route in conf.route.routes:
-        net, msk, gw, r_iface, addr = route[:5]
-        if str(r_iface) == str(iface) and addr == ip and gw == "0.0.0.0" and msk not in (0, 0xFFFFFFFF):
-            prefix = bin(msk).count("1")
-            return iface, ipaddress.ip_network(f"{ltoa(net)}/{prefix}", strict=False)
+        net, msk, gw, r_iface = route[:4]
+        if str(r_iface) != str(iface) or gw != "0.0.0.0" or msk in (0, 0xFFFFFFFF):
+            continue  # not an on-link network route for this interface
+        network = ipaddress.ip_network(f"{ltoa(net)}/{bin(msk).count('1')}", strict=False)
+        if own in network:
+            candidates.append(network)
+ 
+    if candidates:
+        return iface, max(candidates, key=lambda n: n.prefixlen)  # most specific wins
     return iface, ipaddress.ip_network(f"{ip}/24", strict=False)  # best-effort fallback
 
 
