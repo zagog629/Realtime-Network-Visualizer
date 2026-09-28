@@ -3,7 +3,7 @@ from types import SimpleNamespace
 
 import pytest
 
-import arpsweep
+from netviz import arpsweep
 
 # --------------------------------------------------------------------------
 # OUI lookup
